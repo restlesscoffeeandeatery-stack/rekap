@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ollo Tracker Premium</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4F46E5">
+  <style>
+    :root {
+      --gradient-personal: linear-gradient(135deg, #312E81 0%, #4F46E5 100%);
+      --gradient-business: linear-gradient(135deg, #075985 0%, #0EA5E9 100%);
+      --bg-color: #F8FAFC; --card-bg: #FFFFFF; --text-main: #0F172A;
+      --text-muted: #64748B; --success: #10B981; --danger: #EF4444; --warning: #F59E0B;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 80px; }
+    
+    header { background: var(--gradient-personal); color: white; padding: 30px 20px 40px; border-radius: 0 0 32px 32px; transition: background 0.4s ease; }
+    header.business-mode { background: var(--gradient-business); }
+    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    
+    .profile-switch { display: flex; background: rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 4px; width: 180px; }
+    .profile-switch button { flex: 1; padding: 8px 12px; border: none; background: transparent; color: white; border-radius: 16px; font-weight: 600; cursor: pointer; }
+    .profile-switch button.active { background: white; color: var(--text-main); }
+    
+    .container { padding: 0 20px; margin-top: -20px; }
+    .card { background: var(--card-bg); padding: 24px; border-radius: 24px; box-shadow: 0 4px 20px rgba(15,23,42,0.05); margin-bottom: 20px; }
+    .card h3 { font-size: 16px; margin-bottom: 15px; color: var(--text-main); }
+    
+    /* Progress Bars Multi-Cycle */
+    .bar-bg { width: 100%; height: 6px; background: #E2E8F0; border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
+    .bar-fill { height: 100%; width: 0%; transition: width 0.5s ease; }
+    
+    select, input, button.btn-submit { width: 100%; padding: 14px; border: 1px solid #E2E8F0; border-radius: 14px; font-size: 15px; margin-bottom: 12px; }
+    button.btn-submit { background: var(--text-main); color: white; border: none; font-weight: bold; cursor: pointer; }
+    
+    .tx-item { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #F1F5F9; }
+    .tx-amount.expense { color: var(--danger); }
+    .tx-amount.income { color: var(--success); }
+
+    /* Toast */
+    #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); padding: 10px 20px; border-radius: 20px; color: white; background: #333; display: none; z-index: 999; }
+  </style>
+</head>
+<body>
+  <div id="toast">Notifikasi</div>
+
+  <header id="appHeader">
+    <div class="header-top">
+      <h2>Ollo Tracker</h2>
+      <div class="profile-switch">
+        <button class="active" onclick="changeProfile('1')" id="tab-pribadi">Pribadi</button>
+        <button onclick="changeProfile('2')" id="tab-bisnis">Bisnis</button>
+      </div>
+    </div>
+    <p style="font-size: 13px; opacity: 0.8;">🟢 SALDO AMAN SIAP PAKAI (Bebas Krisis)</p>
+    <h1 id="uiSafeToSpend" style="font-size: 34px; font-weight: 800; margin-bottom: 12px;">Rp 0</h1>
+    <div style="font-size: 13px; opacity: 0.75; display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 8px;">
+      <span>Saldo Riil: <strong id="uiRealBalance">Rp 0</strong></span>
+      <span>Beban Invoice: <strong id="uiTotalInvoice" style="color:#FCA5A5;">Rp 0</strong></span>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- BENTENG ALOKASI MULTI-SIKLUS -->
+    <div class="card" id="bentengCard" style="display: none; background: #1E293B; color: white;">
+      <h3 style="color: white;">🛡️ Benteng Alokasi Saldo</h3>
+      <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+        <span>🛒 Bahan Baku (Senin/Kamis)</span><span id="txtBahan">Rp 0 / Rp 1.5M</span>
+      </div>
+      <div class="bar-bg" style="background: rgba(255,255,255,0.1);"><div class="bar-fill" id="barBahan" style="background: #0EA5E9;"></div></div>
+      
+      <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+        <span>⏳ Gaji Part-Time (Weekend)</span><span id="txtPart">Rp 0 / Rp 3.0M</span>
+      </div>
+      <div class="bar-bg" style="background: rgba(255,255,255,0.1);"><div class="bar-fill" id="barPart" style="background: #F59E0B;"></div></div>
+      
+      <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+        <span>👥 Gaji Full-Time (Bulan)</span><span id="txtFull">Rp 0 / Rp 12.0M</span>
+      </div>
+      <div class="bar-bg" style="background: rgba(255,255,255,0.1);"><div class="bar-fill" id="barFull" style="background: #10B981;"></div></div>
+    </div>
+
+    <!-- FORM TRANSAKSI -->
+    <div class="card">
+      <h3>✍️ Catat Transaksi</h3>
+      <form id="txForm">
+        <input type="hidden" id="formProfileId" value="1">
+        <select id="formType" required>
+          <option value="EXPENSE">💸 Pengeluaran</option>
+          <option value="INCOME">💰 Pemasukan</option>
+        </select>
+        <input type="number" id="formAmount" placeholder="Nominal Rp" required>
+        <input type="text" id="formDesc" placeholder="Keterangan" required>
+        <button type="submit" class="btn-submit">Simpan ke Jurnal</button>
+      </form>
+    </div>
+
+    <!-- RIWAYAT TRANSAKSI -->
+    <div class="card">
+      <h3>🕒 Arus Kas Terbaru</h3>
+      <div id="txList"><p style="text-align:center; color: var(--text-muted);">Memuat...</p></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
